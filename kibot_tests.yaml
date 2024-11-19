@@ -1,0 +1,173 @@
+kibot:
+  version: 1
+
+global:
+  out_dir: './'
+  dnp_cross_top_layer: 'User.Eco1'
+  dnp_cross_bottom_layer: 'User.Eco2'
+  filters:
+    - filter: 'Ignore environment.vars missing. kibot#528'
+      number: 9
+    - filter: Ignore missing KiCad 3D models, not in docker images
+      number: 10
+    - filter: 'Ignore multiple schematics warning (hierarchical schematic). kibot#594'
+      number: 44
+
+groups:
+  - name: testpoints
+    outputs:
+      - csv_top_testpoints
+      - csv_bottom_testpoints
+
+variants:
+
+  # Project progress variants
+  - name: 'RELEASED'
+    comment: "A board with this schematic has been sent to production."
+    type: kibom
+    variant: RELEASED
+
+  - name: 'NO_LED'
+    comment: 'Without LED'
+    type: kibom
+    file_id: _(NO_LED)
+    variant: NO_LED 
+
+preflight:
+  fill_zones: true
+  update_xml: true
+
+filters:
+  - name: 'only_testpoints_top'
+    type: generic
+    exclude_top: false
+    exclude_bottom: true
+    include_only:
+      - column: Reference
+        regex: "TP"
+
+  - name: 'only_testpoints_bottom'
+    type: generic
+    exclude_top: true
+    exclude_bottom: false
+    include_only:
+      - column: Reference
+        regex: "TP"
+
+  - name: 'exclude_testpoints'
+    comment: 'Exclude only Testpoints'
+    type: generic
+    exclude_any:
+      - column: Reference
+        regex: "TP"
+
+outputs:
+- name: csv_top_testpoints
+  comment: 'Top Testpoints in CSV format'
+  type: bom
+  dir: 'Testpoints'
+  options:
+    output: '%f-testpoints-top%I%v.%x'
+    csv:
+      hide_pcb_info: True
+      hide_stats_info: True
+    pre_transform: ['_kicost_rename']
+    exclude_filter: 'only_testpoints_top'
+    dnf_filter: '_null'
+    exclude_marked_in_sch: false
+    group_fields: []
+    sort_style: ref
+    use_aux_axis_as_origin: true
+    ignore_dnf: false
+    format: CSV
+    footprint_type_values: 'SMT,THRU,'
+    columns:
+      - field: References
+        name: Ref.
+      - field: Value
+        name: Net     
+      - field: Footprint X
+        name: X
+      - field: Footprint Y
+        name: Y
+
+- name: csv_bottom_testpoints
+  comment: 'Bottom Testpoints in CSV format'
+  type: bom
+  dir: 'Testpoints'
+  options:
+    output: '%f-testpoints-bottom%I%v.%x'
+    csv:
+      hide_pcb_info: True
+      hide_stats_info: True
+    pre_transform: ['_kicost_rename']
+    exclude_filter: 'only_testpoints_bottom'
+    dnf_filter: '_null'
+    exclude_marked_in_sch: false
+    group_fields: []
+    sort_style: ref
+    use_aux_axis_as_origin: true
+    ignore_dnf: false
+    format: CSV
+    footprint_type_values: 'SMT,THRU,'
+    columns:
+      - field: References
+        name: Ref.
+      - field: Value
+        name: Net     
+      - field: Footprint X
+        name: X
+      - field: Footprint Y
+        name: Y
+
+- name: pdf_pcb_print
+  comment: 'PCB Print in PDF format'
+  type: pcb_print
+  dir: PDF
+  options:
+    colored_vias: false
+    colored_pads: false
+    dpi: 1200
+    dnf_filter: _kibom_dnf_Config
+    realistic_solder_mask: false
+    pages:
+      - scaling: 1.0
+        colored_holes: true
+        holes_color: "#FFFFFF"
+        layers:
+          - layer: Edge.Cuts
+            color: '#000000'
+          - layer: F.Cu
+            color: '#EEDAB5'
+          - layer: F.Mask
+            color: '#B9B9B9'
+          - layer: F.Paste
+            color: '#E1A98E'
+          - layer: F.Silkscreen
+            color: '#DB9DE1'
+          - layer: F.Fab
+            exclude_filter: 'exclude_testpoints'
+            color: '#744679'
+          - layer: 'User.Eco1'
+            color: '#D63034'
+      
+      - scaling: 1.0
+        mirror: true
+        colored_holes: true
+        holes_color: "#FFFFFF"
+        layers:
+          - layer: Edge.Cuts
+            color: '#000000'
+          - layer: B.Cu
+            color: '#D5DBF4'
+          - layer: B.Mask
+            color: '#B9B9B9'
+          - layer: B.Paste
+            color: '#BCB9DD'
+          - layer: B.Silkscreen
+            color: '#DB9DE1'
+          - layer: B.Fab
+            exclude_filter: 'exclude_testpoints'
+            color: '#400080'
+          - layer: 'User.Eco2'
+            color: '#D63034'
